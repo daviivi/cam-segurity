@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+  <title>Sistema de Segurança Residencial</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#1a1a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Security Cam">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    * {
+      touch-action: manipulation;
+      box-sizing: border-box;
+    }
+    
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+    
+    body {
+      background: radial-gradient(circle at center, #0a0a0a 0%, #1a1a1a 50%, #000000 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      font-family: 'Consolas', 'Monaco', monospace;
+      margin: 0;
+      padding: 15px;
+      overflow-x: hidden;
+      user-select: none;
+      position: relative;
+    }
+    
+    /* Grain overlay for authentic security camera feel */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    .main-container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: linear-gradient(145deg, rgba(20, 20, 20, 0.95), rgba(10, 10, 10, 0.95));
+      border-radius: 25px;
+      border: 3px solid #333;
+      box-shadow: 
+        0 0 40px rgba(0, 0, 0, 0.8),
+        inset 0 0 20px rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(10px);
+      z-index: 2;
+    }
+    
+    /* Professional Security System Header */
+    .security-header {
+      width: 100%;
+      background: linear-gradient(90deg, #1a1a1a, #2a2a2a, #1a1a1a);
+      border: 2px solid #444;
+      border-radius: 15px;
+      padding: 20px 25px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(15px);
+      box-shadow: 
+        0 5px 20px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .camera-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .camera-brand {
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .camera-model {
+      color: #888;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+    
+    .status-indicators {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    
+    .recording-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 0, 0, 0.1);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 0, 0, 0.3);
+    }
+    
+    .rec-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ff0000;
+      animation: pulse-rec 1.5s infinite;
+      box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+    }
+    
+    @keyframes pulse-rec {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+    
+    .rec-text {
+      color: #ff0000;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .date-time {
+      color: #00ff00;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+      font-weight: bold;
+      text-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+    }
+    
+    /* Enhanced Canvas Styling */
+    canvas {
+      border: 4px solid #333;
+      border-radius: 12px;
+      box-shadow: 
+        0 0 30px rgba(0, 0, 0, 0.7),
+        inset 0 0 30px rgba(0, 0, 0, 0.4);
+      max-width: 100%;
+      height: auto;
+      display: block;
+      transition: all 0.3s ease;
+      background: #000;
+      position: relative;
+    }
+    
+    .canvas-motion {
+      border-color: #00ff00 !important;
+      box-shadow: 
+        0 0 40px rgba(0, 255, 0, 0.6),
+        inset 0 0 30px rgba(0, 0, 0, 0.4) !important;
+      animation: alert-glow 1s infinite alternate;
+    }
+    
+    @keyframes alert-glow {
+      0% { border-color: #00ff00; }
+      100% { border-color: #66ff66; }
+    }
+    
+    /* Professional Security Monitor UI */
+    .monitor-frame {
+      position: relative;
+      background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+      padding: 15px;
+      border-radius: 20px;
+      border: 3px solid #444;
+      box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.6),
+        inset 0 2px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.5);
+    }
+    
+    .monitor-frame::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 4px;
+      background: #444;
+      border-radius: 2px;
+    }
+    
+    .monitor-frame::after {
+      content: '';
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 6px;
+      background: linear-gradient(90deg, #333, #555, #333);
+      border-radius: 3px;
+    }
+    
+    /* Settings Panel - Professional Look */
+    .settings-panel {
+      background: linear-gradient(145deg, rgba(30, 30, 30, 0.98), rgba(20, 20, 20, 0.98));
+      backdrop-filter: blur(20px);
+      border-radius: 15px;
+      padding: 25px;
+      margin: 20px 0;
+      width: 100%;
+      max-width: 450px;
+      border: 2px solid #444;
+      box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .settings-toggle {
+      background: linear-gradient(145deg, #333, #444);
+      border: 2px solid #555;
+      border-radius: 10px;
+      color: #fff;
+      padding: 15px 25px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-bottom: 20px;
+      width: 100%;
+      font-family: 'Consolas', monospace;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .settings-toggle:hover {
+      background: linear-gradient(145deg, #444, #555);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transform: translateY(-2px);
+    }
+    
+    .settings-content {
+      display: none;
+    }
+    
+    .settings-content.active {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .slider-container {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 10px;
+      border: 1px solid #333;
+    }
+    
+    .slider-container label {
+      color: #00ff00;
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      font-family: 'Consolas', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+    
+    .slider {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #111, #333);
+      outline: none;
+      -webkit-appearance: none;
+      border: 1px solid #444;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #00ff00, #00cc00);
+      cursor: pointer;
+      box-shadow: 
+        0 0 15px rgba(0, 255, 0, 0.5),
+        0 2px 5px rgba(0, 0, 0, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .slider::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #00ff00, #00cc00);
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 
+        0 0 15px rgba(0, 255, 0, 0.5),
+        0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+    
+    .slider-value {
+      color: #00ff00;
+      font-weight: bold;
+      font-family: 'Consolas', monospace;
+      text-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+      font-size: 16px;
+    }
+    
+    /* Professional Stats Display */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-top: 25px;
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(145deg, rgba(20, 20, 20, 0.9), rgba(30, 30, 30, 0.9));
+      border-radius: 15px;
+      border: 2px solid #333;
+      backdrop-filter: blur(15px);
+      box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .stat-box {
+      background: linear-gradient(145deg, rgba(10, 10, 10, 0.8), rgba(20, 20, 20, 0.8));
+      border-radius: 12px;
+      padding: 15px 20px;
+      color: white;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border: 2px solid #444;
+      box-shadow: 
+        0 5px 15px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .stat-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .stat-box .stat-label {
+      font-size: 12px;
+      opacity: 0.8;
+      display: block;
+      color: #888;
+      font-family: 'Consolas', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    
+    .stat-box .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00ff00;
+      font-family: 'Consolas', monospace;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+    }
+    
+    .stat-box.alert .stat-value {
+      color: #00ff00;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+      animation: pulse-alert 1.5s infinite;
+    }
+    
+    @keyframes pulse-alert {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+      box-shadow: 0 0 10px currentColor;
+    }
+    
+    .status-loading { 
+      background-color: #ffaa00;
+      animation: pulse-loading 2s infinite;
+    }
+    .status-ready { 
+      background-color: #00ff00;
+      animation: pulse-ready 3s infinite;
+    }
+    .status-error { 
+      background-color: #ff0000;
+      animation: pulse-error 1s infinite;
+    }
+    
+    @keyframes pulse-loading {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    @keyframes pulse-ready {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    @keyframes pulse-error {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    
+    .error-message {
+      background: linear-gradient(145deg, rgba(255, 0, 0, 0.1), rgba(150, 0, 0, 0.1));
+      border: 2px solid rgba(255, 0, 0, 0.4);
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      backdrop-filter: blur(10px);
+      color: #ff8888;
+      box-shadow: 0 5px 20px rgba(255, 0, 0, 0.2);
+    }
+    
+    /* Professional System Status */
+    #status {
+      background: linear-gradient(145deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 20, 0.8));
+      border: 2px solid #444;
+      border-radius: 10px;
+      padding: 15px 20px;
+      color: #fff;
+      font-family: 'Consolas', monospace;
+      font-size: 14px;
+      text-align: center;
+      backdrop-filter: blur(15px);
+      box-shadow: 
+        0 5px 20px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+    
+    /* Mobile optimizations */
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .main-container {
+        padding: 15px;
+      }
+      
+      .security-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+      
+      .status-indicators {
+        align-items: center;
+      }
+      
+      .camera-brand {
+        font-size: 16px;
+      }
+      
+      .settings-panel {
+        padding: 20px;
+      }
+      
+      .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 15px;
+      }
+      
+      .stat-box {
+        padding: 12px 15px;
+      }
+      
+      .stat-box .stat-value {
+        font-size: 20px;
+      }
+    }
+    
+    @media screen and (max-width: 480px) {
+      .camera-brand {
+        font-size: 14px;
+        letter-spacing: 1px;
+      }
+      
+      .camera-model {
+        font-size: 10px;
+      }
+      
+      .stats-container {
+        grid-template-columns: 1fr 1fr;
+      }
+      
+      .stat-box .stat-value {
+        font-size: 18px;
+      }
+    }
+    
+    /* Loading animation */
+    .loading-spinner {
+      border: 3px solid rgba(0, 255, 0, 0.2);
+      border-radius: 50%;
+      border-top: 3px solid #00ff00;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <!-- Professional Security System Header -->
+    <div class="security-header">
+      <div class="camera-info">
+        <div class="camera-brand">🏠 SECURECAM PRO</div>
+        <div class="camera-model">Model: SCR-4K-AI-2024 | Zone: Entrada Principal</div>
+      </div>
+      <div class="status-indicators">
+        <div class="recording-indicator">
+          <div class="rec-dot"></div>
+          <span class="rec-text">REC</span>
+        </div>
+        <div class="date-time" id="security-time">--:--:--</div>
+      </div>
+    </div>
+    
+    <div id="status" class="mb-4 text-base text-white text-center">
+      <span id="status-indicator" class="status-indicator status-loading"></span>
+      <span id="status-text">INICIALIZANDO SISTEMA DE SEGURANÇA...</span>
+    </div>
+    
+    <!-- Professional Monitor Frame -->
+    <div class="monitor-frame">
+      <div id="canvas-container" class="flex justify-center mb-4 w-full"></div>
+    </div>
+    
+
+    
+    <div id="error-message" class="error-message text-red-200 text-sm max-w-full mx-auto" style="display: none;"></div>
+  </div>
+
+  <script>
+    // Global variables
+    let capture;
+    let previousFrame;
+    let currentFrame;
+    let errorDiv;
+    let isSourceReady = false;
+    let detectionEnabled = true;
+    
+    // Configurações otimizadas para câmera de segurança profissional
+    let motionSensitivity = 25;      // Sensibilidade balanceada
+    let minMotionPixels = 200;       // Threshold adequado para objetos reais
+    let minObjectSize = 40;          // Tamanho mínimo para filtrar ruídos
+    let maxObjects = 6;              // Limite prático para monitoramento
+    let canvasWidth, canvasHeight;
+    
+    // Performance tracking
+    let frameRate = 0;
+    let lastFrameTime = 0;
+    let frameCount = 0;
+    
+    // Detection data
+    let detectionData = {
+      score: 0,
+      result: "sem_movimento",
+      motionPixels: 0,
+      motionAreas: [],
+      totalPixels: 0,
+      motionPercentage: 0
+    };
+    
+    let motionHistory = [];
+    let maxHistorySize = 30;
+
+    // Interface elements
+    let statusIndicator, statusText;
+
+    function setup() {
+      // Calculate responsive canvas size
+      calculateCanvasSize();
+      
+      let canvas = createCanvas(canvasWidth, canvasHeight);
+      canvas.parent('canvas-container');
+      canvasElement = canvas.canvas;
+      
+      setupInterface();
+      
+      updateStatus('loading', 'INICIALIZANDO SISTEMA DE SEGURANÇA...');
+      
+      // Start webcam after brief delay
+      setTimeout(() => {
+        initializeWebcam();
+      }, 1000);
+      
+      // Update security time
+      setInterval(updateSecurityTime, 1000);
+      updateSecurityTime(); // Initial call
+    }
+    
+    function updateSecurityTime() {
+      const timeElement = document.getElementById('security-time');
+      if (timeElement) {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('pt-BR', { 
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        const dateString = now.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        timeElement.textContent = `${dateString} ${timeString}`;
+      }
+    }
+    
+    function calculateCanvasSize() {
+      // Resolução HD para câmera de segurança profissional
+      let maxWidth = min(windowWidth - 60, 1280);  // Até Full HD width
+      let maxHeight = windowHeight * 0.6;
+      
+      // Maintain 16:9 aspect ratio (padrão para câmeras de segurança)
+      canvasWidth = maxWidth;
+      canvasHeight = (maxWidth * 9) / 16;
+      
+      // Adjust if height is too large
+      if (canvasHeight > maxHeight) {
+        canvasHeight = maxHeight;
+        canvasWidth = (maxHeight * 16) / 9;
+      }
+      
+      // Resolução mínima profissional para mobile
+      if (canvasWidth < 480) {
+        canvasWidth = 480;
+        canvasHeight = 270;  // 480p mínimo
+      }
+      
+      // Garantir resolução par para melhor compressão
+      canvasWidth = Math.floor(canvasWidth / 2) * 2;
+      canvasHeight = Math.floor(canvasHeight / 2) * 2;
+    }
+
+    function setupInterface() {
+      errorDiv = document.getElementById('error-message');
+      statusIndicator = document.getElementById('status-indicator');
+      statusText = document.getElementById('status-text');
+    }
+
+    async function initializeWebcam() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showError('⚠ ERRO: Navegador não suporta acesso à webcam');
+        return;
+      }
+
+      try {
+        updateStatus('loading', 'CONECTANDO À CÂMERA PRINCIPAL...');
+        
+        // Request camera with alta resolução para segurança profissional
+        const constraints = {
+          video: {
+            width: { ideal: 1280, min: 640 },      // HD mínimo, Full HD ideal
+            height: { ideal: 720, min: 360 },      // 720p mínimo, HD ideal
+            facingMode: 'environment',              // Prefer back camera
+            frameRate: { ideal: 30, min: 15 },     // Frame rate profissional
+            aspectRatio: { ideal: 16/9 },          // Aspecto padrão segurança
+            focusMode: 'continuous',               // Foco contínuo
+            exposureMode: 'continuous',            // Exposição automática
+            whiteBalanceMode: 'continuous'         // Balance de branco automático
+          }
+        };
+        
+        capture = createCapture(constraints);
+        capture.size(canvasWidth, canvasHeight);
+        capture.hide();
+        
+        // Wait for camera to be ready
+        capture.elt.addEventListener('loadeddata', () => {
+          isSourceReady = true;
+          updateStatus('ready', '✅ CÂMERA OPERACIONAL - MONITORAMENTO ATIVO');
+          hideError();
+        });
+        
+        capture.elt.addEventListener('error', (e) => {
+          handleWebcamError(e);
+        });
+        
+      } catch (err) {
+        handleWebcamError(err);
+      }
+    }
+
+    function handleWebcamError(err) {
+      console.error("Webcam error:", err);
+      
+      let message = "";
+      switch(err.name || err.type) {
+        case "NotAllowedError":
+        case "PermissionDeniedError":
+          message = "⚠ ACESSO NEGADO: Permita o uso da câmera nas configurações do navegador";
+          break;
+        case "NotFoundError":
+        case "DevicesNotFoundError":
+          message = "⚠ CÂMERA NÃO ENCONTRADA: Verifique se há uma câmera conectada";
+          break;
+        case "NotReadableError":
+        case "TrackStartError":
+          message = "⚠️ CÂMERA EM USO: Feche outros aplicativos que estão usando a câmera";
+          break;
+        case "SecurityError":
+          message = "🔒 ERRO DE SEGURANÇA: Use HTTPS ou localhost para acessar a câmera";
+          break;
+        case "AbortError":
+          message = "ℹ️ CONEXÃO CANCELADA: Acesso à câmera foi cancelado pelo usuário";
+          break;
+        default:
+          message = `⚠ ERRO DO SISTEMA: ${err.message || err.type || 'Erro desconhecido'}`;
+      }
+      
+      showError(message);
+      updateStatus('error', 'SISTEMA OFFLINE - FALHA NA CÂMERA');
+    }
+
+    function draw() {
+      background(0);
+      
+      // Calculate FPS
+      let currentTime = millis();
+      if (currentTime - lastFrameTime >= 1000) {
+        frameRate = Math.round((frameCount * 1000) / (currentTime - lastFrameTime));
+        lastFrameTime = currentTime;
+        frameCount = 0;
+        updateStats();
+      }
+      frameCount++;
+      
+      if (!isSourceReady) {
+        // Professional loading screen
+        drawLoadingScreen();
+        return;
+      }
+
+      // Draw camera feed
+      if (capture && capture.elt.readyState >= 2) {
+        // Draw video feed
+        push();
+        tint(255, 255);
+        image(capture, 0, 0, width, height);
+        pop();
+        
+        // Process motion detection
+        if (detectionEnabled) {
+          processMotionDetection(capture);
+        }
+      }
+
+      // Draw professional security overlay
+      drawSecurityOverlay();
+      
+      // Update canvas border based on motion
+      updateCanvasBorder();
+    }
+
+    function drawLoadingScreen() {
+      // Professional loading interface
+      fill(0, 100, 0, 100);
+      rect(0, 0, width, height);
+      
+      // Center loading text
+      fill(0, 255, 0);
+      textAlign(CENTER, CENTER);
+      textSize(min(width * 0.05, 20));
+      textStyle(BOLD);
+      text('SISTEMA INICIALIZANDO...', width/2, height/2 - 30);
+      
+      // Animated loading bar
+      let barWidth = min(width * 0.6, 300);
+      let barHeight = 8;
+      let barX = (width - barWidth) / 2;
+      let barY = height/2 + 10;
+      
+      // Loading bar background
+      fill(0, 50, 0);
+      rect(barX, barY, barWidth, barHeight, 4);
+      
+      // Loading bar fill
+      let progress = (sin(frameCount * 0.1) + 1) / 2;
+      fill(0, 255, 0);
+      rect(barX, barY, barWidth * progress, barHeight, 4);
+      
+      // Scanning line effect
+      let scanLine = (frameCount * 3) % width;
+      stroke(0, 255, 0, 150);
+      strokeWeight(2);
+      line(scanLine, 0, scanLine, height);
+      noStroke();
+    }
+
+    function updateCanvasBorder() {
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        if (detectionData.result === "movimento_detectado") {
+          canvas.classList.add('canvas-motion');
+        } else {
+          canvas.classList.remove('canvas-motion');
+        }
+      }
+    }
+
+    function updateStats() {
+      // Stats display removed - keeping only internal calculations
+    }
+
+    function processMotionDetection(source) {
+      try {
+        source.loadPixels();
+        
+        if (source.pixels && source.pixels.length > 0) {
+          currentFrame = [...source.pixels];
+          
+          if (previousFrame && previousFrame.length === currentFrame.length) {
+            detectMotion();
+          }
+          
+          previousFrame = currentFrame;
+        }
+      } catch (error) {
+        console.warn('Motion detection error:', error);
+      }
+    }
+
+    function detectMotion() {
+      let motionPixels = 0;
+      let motionAreas = [];
+      let gridSize = max(20, min(width, height) / 20);
+      let grid = {};
+      
+      // High-quality pixel sampling for better detection
+      for (let y = 0; y < height; y += 2) {
+        for (let x = 0; x < width; x += 2) {
+          let index = (y * width + x) * 4;
+          
+          if (index < currentFrame.length && index < previousFrame.length) {
+            // Enhanced grayscale conversion with better sensitivity
+            let currentGray = (currentFrame[index] * 0.299 + 
+                             currentFrame[index + 1] * 0.587 + 
+                             currentFrame[index + 2] * 0.114);
+            let previousGray = (previousFrame[index] * 0.299 + 
+                              previousFrame[index + 1] * 0.587 + 
+                              previousFrame[index + 2] * 0.114);
+            
+            let diff = abs(currentGray - previousGray);
+            
+            if (diff > motionSensitivity) {
+              motionPixels++;
+              
+              let gridX = Math.floor(x / gridSize);
+              let gridY = Math.floor(y / gridSize);
+              let gridKey = `${gridX},${gridY}`;
+              
+              if (!grid[gridKey]) {
+                grid[gridKey] = { 
+                  count: 0, 
+                  minX: x, maxX: x,
+                  minY: y, maxY: y,
+                  centerX: x, centerY: y,
+                  totalDiff: 0
+                };
+              }
+              
+              grid[gridKey].count++;
+              grid[gridKey].totalDiff += diff;
+              grid[gridKey].minX = min(grid[gridKey].minX, x);
+              grid[gridKey].maxX = max(grid[gridKey].maxX, x);
+              grid[gridKey].minY = min(grid[gridKey].minY, y);
+              grid[gridKey].maxY = max(grid[gridKey].maxY, y);
+              grid[gridKey].centerX = (grid[gridKey].minX + grid[gridKey].maxX) / 2;
+              grid[gridKey].centerY = (grid[gridKey].minY + grid[gridKey].maxY) / 2;
+            }
+          }
+        }
+      }
+      
+      // Filter and process motion areas
+      let validAreas = [];
+      for (let key in grid) {
+        if (grid[key].count > 8) {
+          grid[key].avgIntensity = grid[key].totalDiff / grid[key].count;
+          validAreas.push(grid[key]);
+        }
+      }
+      
+      // Group adjacent areas for better object detection
+      let groupedAreas = groupAdjacentAreas(validAreas, gridSize);
+      
+      // Create professional motion rectangles
+      motionAreas = groupedAreas
+        .map(group => {
+          let minX = Math.min(...group.map(area => area.minX));
+          let maxX = Math.max(...group.map(area => area.maxX));
+          let minY = Math.min(...group.map(area => area.minY));
+          let maxY = Math.max(...group.map(area => area.maxY));
+          
+          let objWidth = maxX - minX;
+          let objHeight = maxY - minY;
+          
+          // Filter objects that are too small
+          if (objWidth < minObjectSize || objHeight < minObjectSize) {
+            return null;
+          }
+          
+          let padding = max(10, min(width, height) * 0.02);
+          let avgIntensity = group.reduce((sum, area) => sum + area.avgIntensity, 0) / group.length;
+          
+          return {
+            x: max(0, minX - padding),
+            y: max(0, minY - padding),
+            width: min(width - (minX - padding), objWidth + padding * 2),
+            height: min(height - (minY - padding), objHeight + padding * 2),
+            intensity: avgIntensity,
+            size: objWidth * objHeight,
+            centerX: (minX + maxX) / 2,
+            centerY: (minY + maxY) / 2,
+            confidence: min(1.0, (group.length * avgIntensity) / 120)
+          };
+        })
+        .filter(area => area !== null)
+        .sort((a, b) => (b.size * b.confidence) - (a.size * a.confidence))
+        .slice(0, maxObjects);
+      
+      // Update detection data
+      detectionData.motionPixels = motionPixels;
+      detectionData.motionAreas = motionAreas;
+      detectionData.totalPixels = (width * height) / 4;
+      
+      let motionPercentage = (motionPixels / detectionData.totalPixels) * 100;
+      detectionData.motionPercentage = motionPercentage;
+      detectionData.score = min(motionPercentage / 12, 1.0);
+      
+      // Enhanced motion detection logic
+      if (motionAreas.length > 0 && motionPixels > minMotionPixels) {
+        detectionData.result = "movimento_detectado";
+      } else {
+        detectionData.result = "sem_movimento";
+      }
+      
+      // Add to motion history for trend analysis
+      motionHistory.push(motionPercentage);
+      if (motionHistory.length > maxHistorySize) {
+        motionHistory.shift();
+      }
+    }
+
+    function groupAdjacentAreas(areas, gridSize) {
+      if (areas.length === 0) return [];
+      
+      let groups = [];
+      let visited = new Set();
+      
+      for (let i = 0; i < areas.length; i++) {
+        if (visited.has(i)) continue;
+        
+        let group = [];
+        let stack = [i];
+        
+        while (stack.length > 0) {
+          let currentIndex = stack.pop();
+          if (visited.has(currentIndex)) continue;
+          
+          visited.add(currentIndex);
+          group.push(areas[currentIndex]);
+          
+          for (let j = 0; j < areas.length; j++) {
+            if (visited.has(j)) continue;
+            
+            let area1 = areas[currentIndex];
+            let area2 = areas[j];
+            
+            let dx = abs(area1.centerX - area2.centerX);
+            let dy = abs(area1.centerY - area2.centerY);
+            let distance = sqrt(dx * dx + dy * dy);
+            
+            if (distance < gridSize * 2) {
+              stack.push(j);
+            }
+          }
+        }
+        
+        groups.push(group);
+      }
+      
+      return groups;
+    }
+
+    function drawSecurityOverlay() {
+      // Professional motion detection rectangles with GREEN color
+      if (detectionData.result === "movimento_detectado" && detectionData.motionAreas.length > 0) {
+        detectionData.motionAreas.forEach((area, index) => {
+          let confidence = area.confidence || 0.5;
+          
+          // Always GREEN color - removed dynamic color system
+          let strokeColor = color(50, 255, 50, 220);
+          let fillColor = color(50, 255, 50, 30);
+          
+          // Motion detection rectangle with professional styling
+          fill(fillColor);
+          stroke(strokeColor);
+          strokeWeight(3);
+          rect(area.x, area.y, area.width, area.height, 8);
+          
+          // Enhanced corner markers
+          stroke(255, 255, 255, 200);
+          strokeWeight(2);
+          let cornerSize = min(20, max(width, height) * 0.03);
+          drawProfessionalCorners(area.x, area.y, area.width, area.height, cornerSize);
+          
+          // Professional threat assessment label
+          if (width > 400) {
+            fill(strokeColor);
+            noStroke();
+            let labelWidth = min(120, width * 0.18);
+            let labelHeight = 24;
+            rect(area.x, area.y - labelHeight - 3, labelWidth, labelHeight, 5);
+            
+            fill(255, 255, 255);
+            textAlign(LEFT, CENTER);
+            textSize(min(12, width * 0.02));
+            textStyle(BOLD);
+            text(`TARGET-${index + 1} ${Math.round(confidence * 100)}%`, 
+                 area.x + 6, area.y - labelHeight/2 - 3);
+          }
+          
+          // Crosshair targeting system
+          stroke(255, 255, 255, 150);
+          strokeWeight(1);
+          let crossSize = 8;
+          line(area.centerX - crossSize, area.centerY, area.centerX + crossSize, area.centerY);
+          line(area.centerX, area.centerY - crossSize, area.centerX, area.centerY + crossSize);
+          
+          // Center tracking dot
+          fill(255, 255, 255, 180);
+          noStroke();
+          ellipse(area.centerX, area.centerY, 4, 4);
+        });
+        
+        // Alert border pulsing effect - changed to GREEN
+        let pulseAlpha = map(sin(frameCount * 0.2), -1, 1, 80, 160);
+        noFill();
+        stroke(80, 255, 80, pulseAlpha);
+        strokeWeight(4);
+        rect(2, 2, width - 4, height - 4, 8);
+      }
+      
+      // Professional HUD overlay
+      drawSecurityHUD();
+      
+      // Scanning lines effect for authentic security camera feel
+      drawScanLines();
+      
+      // Timestamp and camera info overlay
+      drawCameraInfo();
+    }
+
+    function drawProfessionalCorners(x, y, w, h, size) {
+      // Enhanced corner design for professional security system
+      strokeWeight(3);
+      // Top-left
+      line(x, y, x + size, y);
+      line(x, y, x, y + size);
+      // Top-right  
+      line(x + w, y, x + w - size, y);
+      line(x + w, y, x + w, y + size);
+      // Bottom-left
+      line(x, y + h, x + size, y + h);
+      line(x, y + h, x, y + h - size);
+      // Bottom-right
+      line(x + w, y + h, x + w - size, y + h);
+      line(x + w, y + h, x + w, y + h - size);
+      
+      // Corner dots for enhanced visibility
+      strokeWeight(1);
+      fill(255, 255, 255);
+      noStroke();
+      let dotSize = 3;
+      ellipse(x, y, dotSize);
+      ellipse(x + w, y, dotSize);
+      ellipse(x, y + h, dotSize);
+      ellipse(x + w, y + h, dotSize);
+    }
+
+    function drawSecurityHUD() {
+      // Professional status display (top-left)
+      let hudWidth = min(280, width * 0.45);
+      let hudHeight = min(90, height * 0.25);
+      
+      // HUD background with professional styling
+      fill(0, 0, 0, 180);
+      stroke(0, 255, 0, 100);
+      strokeWeight(1);
+      rect(8, 8, hudWidth, hudHeight, 6);
+      
+      // System status
+      fill(0, 255, 0);
+      textAlign(LEFT, TOP);
+      textSize(min(14, width * 0.025));
+      textStyle(BOLD);
+      text("🔒 SECURECAM ACTIVE", 15, 18);
+      
+      // Detection status with GREEN color coding
+      textSize(min(11, width * 0.02));
+      textStyle(NORMAL);
+      
+      let statusColor = detectionData.result === "movimento_detectado" ? 
+        color(80, 255, 80) : color(80, 255, 80);
+      fill(statusColor);
+      
+      let statusText = detectionData.result === "movimento_detectado" ? 
+        "🟢 MOTION DETECTED" : "✅ PERIMETER SECURE";
+      if (width < 400) {
+        statusText = detectionData.result === "movimento_detectado" ? 
+          "🟢 MOTION" : "✅ SAFE";
+      }
+      text(statusText, 15, 38);
+      
+      // System info
+      fill(180, 255, 180);
+      text(`OBJECTS: ${detectionData.motionAreas.length} | FPS: ${frameRate}`, 15, 55);
+      text(`SENSITIVITY: ${motionSensitivity} | ZONE: MAIN`, 15, 72);
+      
+      // Motion intensity indicator (top-right)
+      if (width > 350) {
+        drawMotionMeter();
+      }
+    }
+
+    function drawMotionMeter() {
+      let meterX = width - 100;
+      let meterY = 15;
+      let meterWidth = 80;
+      let meterHeight = 12;
+      
+      // Meter background
+      fill(0, 0, 0, 180);
+      stroke(0, 255, 0, 100);
+      strokeWeight(1);
+      rect(meterX, meterY, meterWidth, meterHeight * 3, 4);
+      
+      // Motion level
+      let motionLevel = map(detectionData.motionPercentage, 0, 20, 0, meterWidth - 4);
+      motionLevel = constrain(motionLevel, 0, meterWidth - 4);
+      
+      // Always GREEN color for meter
+      let meterColor = color(50, 255, 50);
+      
+      fill(meterColor);
+      noStroke();
+      rect(meterX + 2, meterY + 2, motionLevel, meterHeight - 4, 2);
+      
+      // Meter label
+      fill(0, 255, 0);
+      textAlign(CENTER, CENTER);
+      textSize(9);
+      text("MOTION", meterX + meterWidth/2, meterY + meterHeight + 8);
+    }
+
+    function drawScanLines() {
+      // Subtle scanning effect for authentic security camera feel
+      stroke(0, 255, 0, 30);
+      strokeWeight(1);
+      
+      let scanSpeed = frameCount * 2;
+      for (let i = 0; i < 3; i++) {
+        let y = ((scanSpeed + i * height / 3) % height);
+        line(0, y, width, y);
+      }
+      
+      // Occasional glitch lines for realism
+      if (frameCount % 120 == 0) {
+        stroke(0, 255, 0, 80);
+        strokeWeight(2);
+        let glitchY = random(height);
+        line(0, glitchY, width, glitchY);
+      }
+      
+      noStroke();
+    }
+
+    function drawCameraInfo() {
+      // Professional timestamp and camera info (bottom-right)
+      let infoWidth = min(200, width * 0.35);
+      let infoHeight = 40;
+      let infoX = width - infoWidth - 8;
+      let infoY = height - infoHeight - 8;
+      
+      // Semi-transparent background
+      fill(0, 0, 0, 160);
+      stroke(0, 255, 0, 80);
+      strokeWeight(1);
+      rect(infoX, infoY, infoWidth, infoHeight, 4);
+      
+      // Timestamp
+      fill(0, 255, 0);
+      textAlign(RIGHT, CENTER);
+      textSize(min(10, width * 0.018));
+      textStyle(NORMAL);
+      
+      let now = new Date();
+      let timeString = now.toLocaleTimeString('pt-BR', { hour12: false });
+      let dateString = now.toLocaleDateString('pt-BR');
+      
+      text(dateString, infoX + infoWidth - 5, infoY + 12);
+      text(timeString, infoX + infoWidth - 5, infoY + 28);
+      
+      // Camera identifier
+      fill(180, 255, 180);
+      textAlign(LEFT, CENTER);
+      textSize(min(9, width * 0.016));
+      text("CAM-01", infoX + 5, infoY + infoHeight/2);
+    }
+
+    function updateStatus(type, message) {
+      if (statusIndicator && statusText) {
+        statusIndicator.className = `status-indicator status-${type}`;
+        statusText.textContent = message;
+      }
+    }
+
+    function showError(message) {
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+      }
+    }
+
+    function hideError() {
+      if (errorDiv) {
+        errorDiv.style.display = 'none';
+      }
+    }
+
+    function windowResized() {
+      calculateCanvasSize();
+      resizeCanvas(canvasWidth, canvasHeight);
+    }
+  </script>
+</body>
+</html>
